@@ -2,7 +2,7 @@
 #Day 7 Physical landscape version
 library(ggplot2)
 library(ggridges)
-transects <- read.csv("C:/Users/Kellie Heney/OneDrive - Marine Institute/Documents/gis/clipped/again/coords.csv")
+transects <- read.csv("/coords.csv")
 head(transects)
 names(transects)[4] <- "Elevation"
 names(transects)[2] <- "Lon"
@@ -37,7 +37,7 @@ library(ggridges)
 library(mapproj)
 
 # Import the transect data
-transects <- read.csv("C:/Users/Kellie Heney/OneDrive - Marine Institute/Documents/gis/clipped/again/coords.csv")
+transects <- read.csv("/coords.csv")
 
 # view data frame and change column headers
 head(transects)
