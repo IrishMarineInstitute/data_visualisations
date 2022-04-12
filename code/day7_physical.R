@@ -47,7 +47,7 @@ names(transects)[3] <- "Lat"
 names(transects)[4] <- "Elev"
 names(transects)[5] <- "flip"
 # plot the transects with ggplot2 & ggridges
-basic <- ggplot(CraterLake_80transects, 
+basic <- ggplot(transects, 
                            aes(x = Lon, y = Lat, group = Lat, height = Elev)) + 
   geom_density_ridges(stat = "identity")
 
