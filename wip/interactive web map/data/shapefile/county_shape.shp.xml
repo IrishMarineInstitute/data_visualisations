@@ -1,0 +1,2 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<metadata xml:lang="en"><Esri><CreaDate>20220420</CreaDate><CreaTime>16351400</CreaTime><ArcGISFormat>1.0</ArcGISFormat><SyncOnce>TRUE</SyncOnce><DataProperties><lineage><Process ToolSource="c:\program files (x86)\arcgis\desktop10.4\ArcToolbox\Toolboxes\Data Management Tools.tbx\DeleteField" Date="20220420" Time="163514">DeleteField county_shape Field1;index;Slope;R;p;State;County</Process></lineage></DataProperties></Esri></metadata>
