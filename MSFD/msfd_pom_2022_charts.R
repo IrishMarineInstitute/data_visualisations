@@ -14,9 +14,10 @@ library(ggpubr)
 library(tidyverse)
 library(treemap)
 library(waffle)
+library(packcircles)
 
 ################### ReportNetData ##################################
-pom_report_net_data = read_excel('ReportNetFile_Oct2022_V08.xlsx')
+pom_report_net_data = read_excel('ReportNetFile_Oct2022_V13.xlsx')
 descriptors_list = c('D1', 'D2', 'D3', 'D4', 'D5', 'D6', 'D7', 'D8', 'D9', 'D10', 'D11')
 names(descriptors_list) = c('D1', 'D2', 'D3', 'D4', 'D5', 'D6', 'D7', 'D8', 'D9', 'D10', 'D11')
 
@@ -68,9 +69,13 @@ heatmap_data =
   mutate(Feature = strsplit(as.character(Feature), "; ")) %>% 
   unnest(Feature) %>%
   mutate(Feature = strsplit(as.character(Feature), ";")) %>% 
-  unnest(Feature) %>%
+  unnest(Feature) %>% 
+  mutate(PolicyNational = strsplit(as.character(PolicyNational), "; ")) %>% 
+  unnest(PolicyNational) %>%
+  mutate(PolicyNational = strsplit(as.character(PolicyNational), ";")) %>% 
+  unnest(PolicyNational) %>%
   select(MeasureCode, GEScomponent, CoordinationLevel, PoliciesConventions, MeasurePurpose, ResponsibleCompetentAuthority,
-         DPSiR, ImplementationStatus, UpdateType, RelevantKTMs, Feature, `Type of measure`)
+         DPSiR, ImplementationStatus, UpdateType, RelevantKTMs, Feature, `Type of measure`, PolicyNational)
 
 
 
@@ -81,10 +86,10 @@ heatmap_data %>%
   ggballoonplot(x='GEScomponent', y='PoliciesConventions', 
                 size='n',
                 fill='GEScomponent') +
-  labs(size='# of measures',
+  labs(size='Number of Measures',
        y='Policy',
        x='Descriptor',
-       title = 'Number of measures per descriptor and Policy') +
+       title = 'Number of Measures per Descriptor and Policy') +
   scale_fill_manual(values=rev(c('#FF0000',
                                  '#12AD5E', # biodiversity
                                  '#CECD3C', # NI Species
@@ -99,7 +104,9 @@ heatmap_data %>%
                                  '#1A78B6' # underwater noise
   ))) +
   scale_size_continuous(breaks=c(0,5,10,15,20,25,30),
-                        range=c(1,12.5)) +
+                        range=c(1,12.5),
+                        labels=c('0', '1 - 5', '6 - 10', '11 - 15', '16 - 20', '21 - 25', '26 - 30')
+                        ) +
   scale_x_discrete(position='top',limits = rev(levels(heatmap_data$GEScomponent))) +
   scale_y_discrete(limits = rev(sort(unique(heatmap_data$PoliciesConventions)))) +
   theme_minimal() +
@@ -108,9 +115,9 @@ heatmap_data %>%
 ggsave('POM_charts/policy_descriptor_balloon.jpg')
 
 #### TREEMAP - DPSiR and Descriptor ####
-test= heatmap_data %>%
+heatmap_data %>%
   group_by(DPSiR, GEScomponent) %>%
-  summarise(n = n_distinct(MeasureCode)) %>%
+  summarise(n = as.double(n_distinct(MeasureCode))) %>%
   treemap(
     index = c("GEScomponent", "DPSiR"),
     vSize = "n",
@@ -199,26 +206,56 @@ heatmap_data %>%
 ggsave('POM_charts/pom_implementation_status.jpg') 
 
 #### BUBBLE CHART - Measure Update Type ####
-heatmap_data %>%
-  group_by(UpdateType) %>%
-  summarise(n = n_distinct(MeasureCode)) %>%
-  ggballoonplot(y='UpdateType', x=c(0)*length(unique(heatmap_data$UpdateType)),
-                size='n', fill='#39BFBE') +
-  labs(size='',
-       x='',
-       y='') +
-  scale_size_continuous(breaks=c(10,20,30,40,50,60),
-                        range=c(10,50)) +
-  scale_x_continuous(limits=c(-0.00001, 0.00001), 
-                     breaks=c(-0.00001, 0, 0.00001),
-                     expand=c(0,0)) +
-  geom_text(aes(x=0, y=UpdateType, label = n), 
+# heatmap_data %>%
+#   group_by(UpdateType) %>%
+#   summarise(n = n_distinct(MeasureCode)) %>%
+#   ggballoonplot(y='UpdateType', x=c(0)*length(unique(heatmap_data$UpdateType)),
+#                 size='n', fill='#39BFBE') +
+#   labs(size='',
+#        x='',
+#        y='') +
+#   scale_size_continuous(breaks=c(10,20,30,40,50,60),
+#                         range=c(10,50)) +
+#   scale_x_continuous(limits=c(-0.00001, 0.00001), 
+#                      breaks=c(-0.00001, 0, 0.00001),
+#                      expand=c(0,0)) +
+#   geom_text(aes(x=0, y=UpdateType, label = n), 
+#             colour='white', fontface='bold') +
+#   geom_text(aes(x=0.0000018, y=UpdateType, label = UpdateType), 
+#             colour='grey35', fontface='bold', hjust=0) +
+#   theme_void() +
+#   guides(fill="none",
+#          size="none")
+# ggsave('POM_charts/pom_update_type.jpg')
+data_circle = 
+  heatmap_data %>%
+    group_by(UpdateType) %>%
+    summarise(n = n_distinct(MeasureCode))
+packing = circleProgressiveLayout(data_circle$n, sizetype='area')
+# We can add these packing information to the initial data frame
+data_circle <- cbind(data_circle, packing)
+
+# The next step is to go from one center + a radius to the coordinates of a circle that
+# is drawn by a multitude of straight lines.
+dat.gg <- circleLayoutVertices(packing, npoints=50)
+
+# Make the plot
+ggplot() + 
+  geom_polygon(data = dat.gg, aes(x, y, group = id, fill=as.factor(id)), colour = "white") +
+  geom_text(data = data_circle, size=5.75, aes(x, y, label = n), 
             colour='white', fontface='bold') +
-  geom_text(aes(x=0.0000025, y=UpdateType, label = UpdateType), 
-            colour='grey35', fontface='bold', hjust=0) +
-  theme_void() +
-  guides(fill="none",
-         size="none")
+  # geom_text(data = data_circle, size=5.75, aes(x, y-0.35, label = paste('(',V1, ')', sep='')), 
+  #           colour='white', fontface='bold') +
+  scale_size_continuous(range = c(1,2)) +
+  scale_fill_brewer(palette='RdBu',
+                    labels=c("2015 measure that was not reported electronically",
+                             "Measure modified since 2015 PoM",
+                             "Measure new in 2021 PoM",
+                             "Measure same as in 2015 PoM")) +
+  theme_void() + 
+  labs(fill="") +
+  theme(legend.position="top") +
+  coord_equal()
 ggsave('POM_charts/pom_update_type.jpg')
 
 #### WAFFLE CHART ####
@@ -238,9 +275,8 @@ waffle(waffle_vector, rows = 5, legend_pos='top',
        colors=c('#145C9E',
                 '#00A6A6',
                 '#F49F0A',
-                '#C7CDEE',
-                '#0B5563',
-                'grey50'
+                'grey70',
+                '#0B5563'
        )
 )
 ggsave('POM_charts/pom_dpsir_waffle.jpg')
@@ -285,7 +321,7 @@ heatmap_data %>%
        y = '# of measures',
        fill='')+
   coord_flip() +
-  scale_y_continuous(expand = c(0, 0), limits=c(0, 62)) +
+  scale_y_continuous(expand = c(0, 0), limits=c(0, 65)) +
   scale_x_discrete(limits=rev(sort(unique(heatmap_data$RelevantKTMs)))) +
   scale_fill_manual(values=c('#145C9E',
                              '#00A6A6',
@@ -334,7 +370,7 @@ heatmap_data %>%
   ggballoonplot(y='Feature', x='GEScomponent', 
                 size='n',
                 fill='GEScomponent') +
-  labs(size='# of measures',
+  labs(size='Number of Measures',
        x='Descriptor',
        y='Feature') +
   scale_fill_manual(values=rev(c('#12AD5E', # biodiversity
@@ -349,10 +385,43 @@ heatmap_data %>%
                                  '#176552', # marine litter
                                  '#1A78B6' # underwater noise
   ))) +
-  scale_size_continuous(breaks=c(10,20,30,40,50,60),
-                        range=c(1,7)) +
+  scale_size_continuous(breaks=c(20,40,60),
+                        range=c(1,6),
+                        labels=c('0-20', '21-40', '41-60')) +
   scale_x_discrete(position='top',
                    limits = rev(levels(heatmap_data$GEScomponent))) +
   theme_minimal() +
   guides(fill="none")
 ggsave('POM_charts/descriptor_feature_bubble.jpg')
+
+#### National Policies ####
+heatmap_data %>%
+  filter(!is.na(PolicyNational)) %>%
+  group_by(PolicyNational, GEScomponent) %>%
+  summarise(n = n_distinct(MeasureCode)) %>%
+  ggballoonplot(y='PolicyNational', x='GEScomponent', 
+                size='n',
+                fill='GEScomponent') +
+  labs(size='# of measures',
+       x='Descriptor',
+       y='Feature') +
+  scale_fill_manual(values=rev(c('#12AD5E', # biodiversity
+                                 '#CECD3C', # NI Species
+                                 '#39BFBE', # commercial shellfish
+                                 '#61B5E5', # food webs
+                                 '#70923D', # eutrophication
+                                 '#f78308',#rgb(0.9648438, 0.5195312, 0.3164062),#, # seafloor integrity
+                                 '#585995', # hydrographical conditions
+                                 '#5b5e5d', # contaminants
+                                 '#c21f42', # contaminants in seafood
+                                 '#176552', # marine litter
+                                 '#1A78B6' # underwater noise
+  )))  +
+  scale_size_continuous(breaks=c(2,5,10),
+                        range=c(1,10)) +
+  scale_x_discrete(position='top',
+                   limits = rev(levels(heatmap_data$GEScomponent))) +
+  scale_y_discrete(limits = rev(sort(unique(heatmap_data$PolicyNational)))) +
+  theme_minimal() +
+  guides(fill="none")
+ggsave('POM_charts/national_policies_bubble.jpg')
