@@ -1,0 +1,123 @@
+---
+title: "Annex"
+output:
+  word_document: default
+header-includes: \usepackage{caption}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir='C:/Users/dosullivan1/IdeaProjects/data_visualisations/MSFD')
+```
+
+```{r cars, include=FALSE, echo=FALSE}
+library(readxl)
+library(dplyr)
+library(gt)
+library(stringr)
+library(tidyr)
+library(flextable)
+library(officer)
+#devtools::install_github("rstudio/gt")
+```
+
+```{r pressure, echo=FALSE, include=FALSE}
+pom_report_net_data = read_excel('ReportNetFile_Oct2022_V17.xlsx')
+```
+
+
+```{r, echo=FALSE, results='asis'}
+for(row in 1:nrow(pom_report_net_data)){
+  header_title = paste(str_replace(pom_report_net_data[row, 'MeasureCode'], 'ACSIE-', ''), pom_report_net_data[row, 'MeasureName'])
+  header_subtitle = pom_report_net_data[row, 'MeasureDescription']
+  
+  variables = 
+    pom_report_net_data[row,] %>%
+    select(MeasureDescription, GEScomponent, DAPSIR, `Type of measure`, ImplementationStatus) %>%
+    rename(Descriptor=GEScomponent, 
+           Type=`Type of measure`, Status=ImplementationStatus) %>%
+    mutate(Type=str_replace(Type, ' Measure', ''), 
+           Status=str_to_title(str_replace(Status, 'Measure ', ''))) %>%
+    as.vector()
+  
+  # create data frame in the order needed for the table
+  df_for_viz = data.frame(name=colnames(variables)[2:3], value = c(variables[[2]],variables[[3]]),
+                          name_2=colnames(variables)[4:5], value_2 = c(variables[[4]],variables[[5]])
+                          )
+
+  column_names = c("", "", "", "")
+  names(column_names) = c('name', 'value', 'name_2', 'value_2')
+
+  tbl = flextable(df_for_viz) %>%
+    delete_part(part='header') %>%
+    add_header_row(values=paste(header_subtitle),
+                   colwidths = c(4)) %>%
+    add_header_row(values=paste(header_title),
+                   colwidths = c(4)) %>%
+    bold(part = "header", i=1) %>% 
+    color(part = "header", color = "white") %>%
+    align(align = "left", part = "header") %>%
+    bg(bg = "#68a63f", part = "header") %>%
+    bg(j = ~ name, bg="grey80") %>%
+    bg(j = ~ name_2, bg="grey80") %>%
+    set_table_properties(layout = "fixed") %>%
+    hline(part="body", border = fp_border(color = "grey30")) %>%
+    width(width=4, j=1, unit='cm') %>%
+    width(width=8, j=2, unit='cm') %>%
+    width(width=2.5, j=3, unit='cm') %>%
+    width(width=3.5, j=4, unit='cm')
+  
+  cat(knitr::knit_print(tbl))
+  cat("\\")
+  }
+```
+```{r, echo=FALSE}
+  
+  # # plot graph
+  # df_for_viz %>%
+  # gt(rowname_col = 'name',
+  #    rownames_to_stub=FALSE) %>%
+  # tab_header(
+  #   title = header_title,
+  #   subtitle = header_subtitle
+  # ) %>%
+  # tab_options(heading.background.color='#68a63f') %>%
+  # tab_style(
+  #   style = list(
+  #     cell_fill(color = "#68a63f", alpha=0.25),
+  #     cell_text(weight = "bold")
+  #   ),
+  #   locations = cells_body(columns = name_2)
+  # ) %>%
+  # tab_style(
+  #   style = list(
+  #     cell_fill(color = "grey80")
+  #   ),
+  #   locations = cells_column_labels(columns=c('name', 'value', 'name_2', 'value_2'))
+  # ) %>%
+  # tab_style(
+  #   style = list(
+  #     cell_fill(color = "#68a63f", alpha=0.25),
+  #     cell_text(weight = "bold", align='left')
+  #   ),
+  #   locations = cells_stub(rows = TRUE)
+  #   ) %>%
+  # tab_style(
+  #   style = list(
+  #     cell_fill(color = "grey80")
+  #   ),
+  #   locations = cells_stubhead()
+  #   ) %>%
+  # cols_label('value' = '',
+  #            'name_2' = '',
+  #            'value_2'='') %>%
+  # tab_options(table_body.hlines.color='grey80',
+  #             table.border.top.color = '#68a63f',
+  #             heading.border.bottom.color = '#68a63f',
+  #             column_labels.border.bottom.color = 'grey80',
+  #             row_group.border.right.color = 'grey80',
+  #             stub_row_group.border.color = 'black',
+  #             table.align='left',
+  #             table.width = pct(100)) %>%
+  # gtsave(paste('POMS_tables/table_', as.character(row), '.png'))
+```
