@@ -22,7 +22,7 @@ library(officer)
 ```
 
 ```{r pressure, echo=FALSE, include=FALSE}
-pom_report_net_data = read_excel('ReportNetFile_Oct2022_V17.xlsx')
+pom_report_net_data = read_excel('./ReportNetFiles2022/ReportNetFile_Oct2022_V31.xlsx')
 ```
 
 
@@ -33,9 +33,9 @@ for(row in 1:nrow(pom_report_net_data)){
   
   variables = 
     pom_report_net_data[row,] %>%
-    select(MeasureDescription, GEScomponent, DAPSIR, `Type of measure`, ImplementationStatus) %>%
+    select(MeasureDescription, GEScomponent, DAPSIR, MeasureType, ImplementationStatus) %>%
     rename(Descriptor=GEScomponent, 
-           Type=`Type of measure`, Status=ImplementationStatus) %>%
+           Type=MeasureType, Status=ImplementationStatus) %>%
     mutate(Type=str_replace(Type, ' Measure', ''), 
            Status=str_to_title(str_replace(Status, 'Measure ', ''))) %>%
     as.vector()
