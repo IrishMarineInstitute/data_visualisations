@@ -6,7 +6,7 @@ library(ggplot2)
 library(tidyr)
 library(stringr)
 
-pom_report_net_data = read_excel('./ReportNetFiles2022/ReportNetFile_Oct2022_V23.xlsx')
+pom_report_net_data = read_excel('./ReportNetFiles2022/ReportNetFile_Oct2022_V31.xlsx')
 overall_status = read_excel("C:/Users/dosullivan1/IdeaProjects/data_visualisations/MSFD/2018 Article 8 9 10 last reported data/Art8_GES/OverallStatus.xlsx")
 
 
@@ -45,7 +45,8 @@ poms_2022 =
                                                              ifelse(GEScomponent==1, 'D1',
                                                                     ifelse(GEScomponent==4,'D4',
                                                                            ifelse(GEScomponent==6,'D6',
-                                                                                  GEScomponent)))))
+                                                                                  ifelse(str_starts(GEScomponent, 'D1\\.'), 'D1', 
+                                                                                         GEScomponent))))))
   ) %>% 
   unnest(GEScomponent) %>%
   mutate(MeasureOldCode = strsplit(as.character(MeasureOldCode), ";")) %>% 
@@ -63,40 +64,48 @@ poms_2022 =
 ## Count the number of measures in 2015 Update Type
 count_2015_measures = 
   overall_status %>%
+  mutate(GEScomponent = ifelse(str_starts(GEScomponent, 'D1\\.'), 'D1', 
+                               GEScomponent)) %>%
   left_join(poms_2022, by = c("GEScomponent"="GEScomponent")) %>%
   filter(UpdateType %in% c('Measure same as in 2015 PoM', '2015 measure that was not reported electronically',
                            'Measure modified since 2015 PoM', 'Measure withdrawn')) %>%
-  group_by(GEScomponent, GESachieved) %>%
+  group_by(GEScomponent) %>%
   summarise(no_measures_2015 = n_distinct(MeasureOldCode, na.rm=TRUE))
 
 ## Count how 2022 measures
 count_2022_measures = 
   overall_status %>%
+  mutate(GEScomponent = ifelse(str_starts(GEScomponent, 'D1\\.'), 'D1', 
+                               GEScomponent)) %>%
   left_join(poms_2022, by = c("GEScomponent"="GEScomponent")) %>%
   filter(!UpdateType %in% c("Measure withdrawn")) %>%
-  group_by(GEScomponent, GESachieved) %>%
+  group_by(GEScomponent) %>%
   summarise(no_measures_2022 = n_distinct(MeasureCode, na.rm=TRUE))
 
 ## Count new measures in 2022
 new_2022_measures = 
   overall_status %>%
+  mutate(GEScomponent = ifelse(str_starts(GEScomponent, 'D1\\.'), 'D1', 
+                               GEScomponent)) %>%
   left_join(poms_2022, by = c("GEScomponent"="GEScomponent")) %>%
   filter(UpdateType %in% c("Measure new in 2021 PoM")) %>%
-  group_by(GEScomponent, GESachieved) %>%
+  group_by(GEScomponent) %>%
   summarise(new_measures_2022 = n_distinct(MeasureCode, na.rm=TRUE))
 
 # Count of modified measures in 2022
 modified_2022_measures = 
   overall_status %>%
+  mutate(GEScomponent = ifelse(str_starts(GEScomponent, 'D1\\.'), 'D1', 
+                               GEScomponent)) %>%
   left_join(poms_2022, by = c("GEScomponent"="GEScomponent")) %>%
   filter(UpdateType %in% c("Measure modified since 2015 PoM")) %>%
-  group_by(GEScomponent, GESachieved) %>%
+  group_by(GEScomponent) %>%
   summarise(modified_measures_2022 = n_distinct(MeasureCode, na.rm=TRUE))
 
 
 # Join all together and write to CSV
 count_2015_measures %>%
-  left_join(count_2022_measures, by=c("GEScomponent"="GEScomponent",  "GESachieved"="GESachieved")) %>%
-  left_join(new_2022_measures, by=c("GEScomponent"="GEScomponent",  "GESachieved"="GESachieved")) %>%
-  left_join(modified_2022_measures, by=c("GEScomponent"="GEScomponent", "GESachieved"="GESachieved")) %>%
+  left_join(count_2022_measures, by=c("GEScomponent"="GEScomponent")) %>%
+  left_join(new_2022_measures, by=c("GEScomponent"="GEScomponent")) %>%
+  left_join(modified_2022_measures, by=c("GEScomponent"="GEScomponent")) %>%
   write.csv(., file = './GeneratedDataFiles/gap_analysis_v3.csv')
